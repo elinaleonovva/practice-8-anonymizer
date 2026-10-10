@@ -1,0 +1,96 @@
+name: practice8-anonymization
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: platform_db
+      POSTGRES_USER: platform_user
+      POSTGRES_PASSWORD: platform_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/init-databases.sql:/docker-entrypoint-initdb.d/01-create-databases.sql:ro
+    networks: [platform-network]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "15672:15672"
+    networks: [platform-network]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  dataset-service:
+    build:
+      context: .
+      args: { MODULE: dataset-service }
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/dataset_db
+      SPRING_DATASOURCE_USERNAME: platform_user
+      SPRING_DATASOURCE_PASSWORD: platform_password
+      SPRING_RABBITMQ_HOST: rabbitmq
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [platform-network]
+
+  export-service:
+    build:
+      context: .
+      args: { MODULE: export-service }
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/export_db
+      SPRING_DATASOURCE_USERNAME: platform_user
+      SPRING_DATASOURCE_PASSWORD: platform_password
+      SPRING_RABBITMQ_HOST: rabbitmq
+      DATASET_SERVICE_URL: http://dataset-service:8080
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      dataset-service: { condition: service_healthy }
+    networks: [platform-network]
+
+  anonymizer-service:
+    build:
+      context: .
+      args: { MODULE: anonymizer-service }
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/anonymizer_db
+      SPRING_DATASOURCE_USERNAME: platform_user
+      SPRING_DATASOURCE_PASSWORD: platform_password
+      SPRING_RABBITMQ_HOST: rabbitmq
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [platform-network]
+
+  api-gateway:
+    build:
+      context: .
+      args: { MODULE: api-gateway }
+    ports:
+      - "8080:8080"
+    depends_on:
+      dataset-service: { condition: service_healthy }
+      export-service: { condition: service_healthy }
+      anonymizer-service: { condition: service_healthy }
+    networks: [platform-network]
+
+networks:
+  platform-network:
+    name: practice8-platform-network
+
+volumes:
+  postgres-data:
+    name: practice8-postgres-data

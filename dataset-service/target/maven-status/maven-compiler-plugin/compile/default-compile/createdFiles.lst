@@ -1,0 +1,8 @@
+ru\mirea\prks\practice8\dataset\api\DatasetController.class
+ru\mirea\prks\practice8\dataset\api\DatasetValidationResponse.class
+ru\mirea\prks\practice8\dataset\repository\DatasetRepository.class
+ru\mirea\prks\practice8\dataset\api\DatasetResponse.class
+ru\mirea\prks\practice8\dataset\config\DemoDataInitializer.class
+ru\mirea\prks\practice8\dataset\DatasetServiceApplication.class
+ru\mirea\prks\practice8\dataset\config\RequestTraceFilter.class
+ru\mirea\prks\practice8\dataset\domain\Dataset.class
