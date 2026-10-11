@@ -10,7 +10,7 @@ Start-Sleep -Seconds 2
 Write-Host "`nRequest during the outage (503 expected):" -ForegroundColor Yellow
 $measure = Measure-Command {
     try {
-        Invoke-WebRequest "http://localhost:8080/api/exports" -Method Post -Headers $headers `
+        Invoke-WebRequest "http://localhost/api/exports" -Method Post -Headers $headers `
             -ContentType "application/json" -Body $body -UseBasicParsing
     } catch {
         $response = $_.Exception.Response

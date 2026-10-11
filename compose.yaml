@@ -1,6 +1,20 @@
 name: practice8-anonymization
 
 services:
+  traefik:
+    image: traefik:v3.1
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      api-gateway: { condition: service_healthy }
+    networks: [platform-network]
+
   postgres:
     image: postgres:16-alpine
     environment:
@@ -79,8 +93,12 @@ services:
     build:
       context: .
       args: { MODULE: api-gateway }
-    ports:
-      - "8080:8080"
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=practice8-platform-network
+      - traefik.http.routers.api-gateway.rule=PathPrefix(`/`)
+      - traefik.http.routers.api-gateway.entrypoints=web
+      - traefik.http.services.api-gateway.loadbalancer.server.port=8080
     depends_on:
       dataset-service: { condition: service_healthy }
       export-service: { condition: service_healthy }
